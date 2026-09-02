@@ -60,7 +60,7 @@ async function AnalyticsDataContainer({
   const leaveStart = isAdmin ? selectedDate : startOfMonth;
   const leaveEnd = isAdmin ? selectedDate : endOfMonth;
 
-  let leavesQuery = supabase.from("employee_leaves").select("employee_id, start_date, end_date")
+  let leavesQuery = supabase.from("employee_leaves").select("employee_id, start_date, end_date, is_half_day")
     .eq("status", "approved").lte("start_date", leaveEnd).gte("end_date", leaveStart);
 
   if (!isAdmin) {

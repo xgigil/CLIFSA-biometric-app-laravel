@@ -59,6 +59,7 @@ export type PersonnelAnalytics = {
   log_id?: number;
   raw_log_id?: number;
   raw_logs?: RawBiometricLog[];
+  is_half_day?: boolean;
 };
 
 function RowActions({ row }: { row: Row<PersonnelAnalytics> }) {
@@ -275,10 +276,17 @@ export const columns: ColumnDef<PersonnelAnalytics>[] = [
       const { icon, label } = styles[status];
 
       return (
-        <span className="flex w-fit items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-transparent dark:text-slate-300 animate-fade-in">
-          {icon}
-          {label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="flex w-fit items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-transparent dark:text-slate-300 animate-fade-in">
+            {icon}
+            {label}
+          </span>
+          {row.original.is_half_day && (
+            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">
+              Half-day Leave
+            </span>
+          )}
+        </div>
       );
     },
   },

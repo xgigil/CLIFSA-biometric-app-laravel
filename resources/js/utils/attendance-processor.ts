@@ -23,14 +23,16 @@ export type LeaveRow = {
   employee_id: number;
   start_date: string;
   end_date: string;
+  is_half_day?: boolean | number;
 }
 
-export type LeaveIndex = Set<string>;
+export type LeaveMeta = { isHalfDay: boolean };
+export type LeaveIndex = Map<string, LeaveMeta>;
 
 const MAX_LEAVE_SPAN_DAYS = 366;
 
 export function buildLeaveIndex(leaves: LeaveRow[]): LeaveIndex {
-  const index: LeaveIndex = new Set();
+  const index: LeaveIndex = new Map();
 
   leaves.forEach((leave => {
     const start = leave.start_date?.substring(0, 10);
@@ -45,7 +47,9 @@ export function buildLeaveIndex(leaves: LeaveRow[]): LeaveIndex {
       const y = cursor.getUTCFullYear();
       const m = String(cursor.getUTCMonth() + 1).padStart(2, "0");
       const d = String(cursor.getUTCDate()).padStart(2, "0");
-      index.add(`${leave.employee_id}|${y}-${m}-${d}`);
+      index.set(`${leave.employee_id}|${y}-${m}-${d}`, {
+        isHalfDay: !!leave.is_half_day,
+      });
       cursor.setUTCDate(cursor.getUTCDate() + 1);
       guard++;
     }
@@ -57,6 +61,10 @@ export function buildLeaveIndex(leaves: LeaveRow[]): LeaveIndex {
 export function isOnLeave( index: LeaveIndex, empId: number | string, dateStr: string ): boolean {
   return index.has(`${empId}|${dateStr}`);
 }
+
+export function isHalfDayLeave(index: LeaveIndex, empId: number | string, dateStr: string): boolean {
+  return index.get(`${empId}|${dateStr}`)?.isHalfDay ?? false;
+}
 // For employee on-leave --end--
 
 export function processDailyLogs(
@@ -65,7 +73,7 @@ export function processDailyLogs(
   workStartTime: string = "08:00",
   gracePeriod: number = 0,
   dateStr?: string,
-  leaveIndex: LeaveIndex = new Set(),
+  leaveIndex: LeaveIndex = new Map(),
 ): PersonnelAnalytics[] {
   const groups: Record<number, RawBiometricLog[]> = {};
 
@@ -137,6 +145,7 @@ export function processDailyLogs(
     });
 
     const onLeave = !!dateStr && isOnLeave(leaveIndex, empId, dateStr);
+    const halfDay = !!dateStr && isHalfDayLeave(leaveIndex, empId, dateStr);
 
     if (cleanedLogs.length === 0) {
       return {
@@ -148,6 +157,7 @@ export function processDailyLogs(
         status: (onLeave ? "on_leave" : "absent") as AttendanceStatus, // added on_leave status
         log_id: undefined,
         raw_logs: [],
+        is_half_day: halfDay,
       };
     }
 
@@ -181,6 +191,7 @@ export function processDailyLogs(
       last_punch: lastPunch,
       total_hours_worked: totalHoursWorked,
       status,
+      is_half_day: halfDay,
       log_id: cleanedLogs[0]?.id,
       raw_log_id: cleanedLogs[0]?.id,
       raw_logs: cleanedLogs,
@@ -194,7 +205,7 @@ export function processUserHistoryLogs(
   workStartTime: string = "08:00",
   gracePeriod: number = 0,
   selectedDate?: string,
-  leaveIndex: LeaveIndex = new Set(),
+  leaveIndex: LeaveIndex = new Map(),
 ): PersonnelAnalytics[] {
   const dateGroups: Record<string, RawBiometricLog[]> = {};
 
@@ -273,6 +284,7 @@ export function processUserHistoryLogs(
 
     if (!dayLogs || dayLogs.length === 0) {
       const onLeave = isOnLeave(leaveIndex, employee.employee_id, dateStr);
+      const halfDay = isHalfDayLeave(leaveIndex, employee.employee_id, dateStr)
       return {
         employee_id: String(employee.employee_id),
         employee_name: employee.employee_name || "Unregistered Token",
@@ -283,6 +295,7 @@ export function processUserHistoryLogs(
         date: dateStr,
         log_id: undefined,
         raw_logs: [],
+        is_half_day: halfDay,
       };
     }
 
@@ -290,7 +303,9 @@ export function processUserHistoryLogs(
       dayLogs,
       [employee],
       workStartTime,
-      gracePeriod
+      gracePeriod,
+      dateStr,
+      leaveIndex
     );
 
     return {
@@ -311,6 +326,7 @@ export interface EmployeeMonthlyStats {
     state: "checked_in" | "checked_out" | "not_scanned" | "on_leave";
     firstPunch: string | null;
     lastPunch: string | null;
+    isHalfDayLeave?: boolean;
   };
 }
 
@@ -325,6 +341,7 @@ export interface CalendarDayStatus {
   totalHours: number;
   lateMins: number;
   logs: RawBiometricLog[];
+  isHalfDayLeave?: boolean;
 }
 
 function getCutoffTimeStr(workStartTime: string, gracePeriod: number): string {
@@ -446,7 +463,7 @@ export function calculateEmployeePersonalStats(
   gracePeriod: number = 0,
   monthDates: string[],
   todayStr: string,
-  leaveIndex: LeaveIndex = new Set()
+  leaveIndex: LeaveIndex = new Map()
 ): EmployeeMonthlyStats {
   const empLogs = logs.filter((l) => l.employee_id === empId);
 
@@ -529,21 +546,26 @@ export function calculateEmployeePersonalStats(
     state: isOnLeave(leaveIndex, empId, todayStr) ? "on_leave" : "not_scanned",
     firstPunch: null,
     lastPunch: null,
+    isHalfDayLeave: isHalfDayLeave(leaveIndex, empId, todayStr),
   };
 
   if (todayLogs.length > 0) {
     const res = processSingleDayEmpLogs(todayLogs, workStartTime, gracePeriod);
+    const halfDay = isHalfDayLeave(leaveIndex, empId, todayStr);
+    
     if (res.cleanedLogs.length === 1) {
       todayStatus = {
         state: "checked_in",
         firstPunch: res.firstPunch,
         lastPunch: null,
+        isHalfDayLeave: halfDay,
       };
     } else if (res.cleanedLogs.length >= 2) {
       todayStatus = {
         state: "checked_out",
         firstPunch: res.firstPunch,
         lastPunch: res.lastPunch,
+        isHalfDayLeave: halfDay,
       };
     }
   }
@@ -567,7 +589,7 @@ export function generateMonthlyCalendarMatrix(
   workStartTime: string = "08:00",
   gracePeriod: number = 0,
   todayStr: string,
-  leaveIndex: LeaveIndex = new Set(),
+  leaveIndex: LeaveIndex = new Map(),
 ): CalendarDayStatus[] {
   const empLogs = logs.filter((l) => l.employee_id === empId);
 
@@ -616,7 +638,8 @@ export function generateMonthlyCalendarMatrix(
 
     let status: CalendarDayStatus["status"]; // added on_leave status
     const onLeave = isOnLeave(leaveIndex, empId, dateStr);
-       
+    const halfDay = isHalfDayLeave(leaveIndex, empId, dateStr);
+    
     if (isWeekend) {
       status = "weekend";
     } else if (dayLogs.length > 0) {
@@ -640,6 +663,7 @@ export function generateMonthlyCalendarMatrix(
       totalHours: res.totalHours,
       lateMins: res.lateMins,
       logs: dayLogs,
+      isHalfDayLeave: halfDay,
     });
   }
 

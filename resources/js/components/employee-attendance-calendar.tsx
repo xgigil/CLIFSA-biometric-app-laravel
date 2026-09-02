@@ -300,6 +300,11 @@ export function EmployeeAttendanceCalendar({
                           On Leave
                         </Badge> 
                       )}
+                      {cell.isHalfDayLeave && (
+                        <span className="ml-0.5 text-[8px] md:text-[9px] font-medium text-blue-600 dark:text-blue-400 leading-none">
+                          Half-day Leave
+                        </span>
+                      )}
                       {cell.status === "weekend" && (
                         <span className="text-[9px] text-muted-foreground/60 hidden sm:inline">
                           Weekend
@@ -321,6 +326,11 @@ export function EmployeeAttendanceCalendar({
                         <div className="text-[10px] font-medium text-foreground/80">
                           {cell.totalHours} hrs
                         </div>
+                      )}
+                      {cell.isHalfDayLeave && (
+                        <span className="text-[9px] font-medium text-blue-600 dark:text-blue-400">
+                          Half-day Leave
+                        </span>
                       )}
                     </>
                   ) : cell.isCurrentMonth && !cell.isWeekend && cell.status !== "future" && cell.status !== "on_leave" ? (
@@ -388,6 +398,11 @@ export function EmployeeAttendanceCalendar({
                         <Badge variant="outline" className="text-muted-foreground border-muted-foreground gap-1">
                           Upcoming Day
                         </Badge>
+                      )}
+                      {selectedDay.isHalfDayLeave && (
+                        <span className="ml-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                          Half-day Leave
+                        </span>
                       )}
                     </div>
                   </div>

@@ -16,7 +16,7 @@ export async function getLeavesForRangedAction(startDate: string, endDate: strin
     try {
         const db = await createClient();
         let query = db.from("employee_leaves")
-            .select("id, employee_id, start_date, end_date, leave_type, note")
+            .select("id, employee_id, start_date, end_date, leave_type, note, is_half_day")
             .eq("status", "approved")
             .lte("start_date", endDate)
             .gte("end_date", startDate);
@@ -32,7 +32,7 @@ export async function getLeavesForRangedAction(startDate: string, endDate: strin
     }
 }
 
-export async function setLeaveAction(payload: { employee_id: number; start_date: string; end_date: string; leave_type?: string; note?: string }) {
+export async function setLeaveAction(payload: { employee_id: number; start_date: string; end_date: string; leave_type?: string; note?: string; is_half_day?: boolean }) {
     try {
         const db = await createClient();
         if (!(await checkIsAdmin(db))) {
@@ -47,6 +47,10 @@ export async function setLeaveAction(payload: { employee_id: number; start_date:
         
         if (end_date < start_date) { // potential syntax error here
             return { success: false, error: "End date cannot be before start date"};
+        }
+
+        if (payload.is_half_day && start_date !== end_date) {
+            return { success: false, error: "Half-day leave applies to a single day only." };
         }
 
         const { data: { user } } = await db.auth.getUser();
@@ -70,6 +74,7 @@ export async function setLeaveAction(payload: { employee_id: number; start_date:
             employee_id, start_date, end_date,
             leave_type: payload.leave_type || "vacation",
             note: payload.note || null,
+            is_half_day: payload.is_half_day ? 1 : 0,
             status: "approved",
             created_by: user?.id || null,
         })

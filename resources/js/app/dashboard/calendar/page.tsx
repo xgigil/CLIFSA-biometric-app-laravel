@@ -81,7 +81,7 @@ async function CalendarContainer({
       .maybeSingle(),
     supabase
       .from("employee_leaves")
-      .select("employee_id, start_date, end_date")
+      .select("employee_id, start_date, end_date, is_half_day")
       .eq("status", "approved")
       .eq("employee_id", selectedEmployeeId)
       .lte("start_date", endDate)

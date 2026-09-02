@@ -80,7 +80,7 @@ async function AdminDashboardContainer({ today }: AdminContainerProps) {
 
     const leavesQuery = supabase
       .from("employee_leaves")
-      .select("employee_id, start_date, end_date")
+      .select("employee_id, start_date, end_date, is_half_day")
       .eq("status", "approved")
       .lte("start_date", weekDates[4])
       .gte("end_date", weekDates[0]);
@@ -235,7 +235,7 @@ async function EmployeeDashboardContainer({
         .maybeSingle(),
       supabase
         .from("employee_leaves")
-        .select("employee_id, start_date, end_date")
+        .select("employee_id, start_date, end_date, is_half_day")
         .eq("status", "approved")
         .eq("employee_id", userEmpId)
         .lte("start_date", monthDates[monthDates.length - 1])

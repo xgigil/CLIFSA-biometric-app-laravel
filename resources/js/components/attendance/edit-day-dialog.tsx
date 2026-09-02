@@ -58,6 +58,7 @@ interface LeaveRecord {
   end_date: string;
   leave_type?: string | null;
   note?: string | null;
+  is_half_day?: boolean | number | null;
 }
 
 const LEAVE_TYPES = [
@@ -114,6 +115,7 @@ export function EditDayDialog({
   const [markLeave, setMarkLeave] = React.useState(false);
   const [leaveType, setLeaveType] = React.useState("vacation");
   const [leaveNote, setLeaveNote] = React.useState("");
+  const [isHalfDay, setIsHalfDay] = React.useState(false);
   const [fetchingLeave, setFetchingLeave] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
@@ -138,6 +140,7 @@ export function EditDayDialog({
     setMarkLeave(false);
     setLeaveType("vacation");
     setLeaveNote("");
+    setIsHalfDay(false);
 
     if (!employeeId || !date) return;
 
@@ -237,6 +240,7 @@ export function EditDayDialog({
         end_date: date,
         leave_type: leaveType,
         note: leaveNote.trim() || undefined,
+        is_half_day: isHalfDay,
       });
       if (!res.success) failures.push(res.error || "Failed to set leave");
     }
@@ -349,6 +353,7 @@ export function EditDayDialog({
                 </div>
                 <div className="text-xs text-muted-foreground capitalize">
                   {(leave.leave_type || "vacation").replace("_", " ")}
+                  {leave.is_half_day ? " • half-day" : ""}
                   {leave.note ? ` \u2022 ${leave.note}` : ""}
                 </div>
 
@@ -405,6 +410,17 @@ export function EditDayDialog({
                   Mark this day as on leave
                 </label>
 
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-blue-600 cursor-pointer"
+                    checked={isHalfDay}
+                    disabled={saving}
+                    onChange={(e) => setIsHalfDay(e.target.checked)}
+                  />
+                  Half-day Leave
+                </label>
+
                 {markLeave && (
                   <div className="space-y-3 pl-6">
                     <div className="space-y-2">
@@ -443,10 +459,17 @@ export function EditDayDialog({
                       />
                     </div>
 
-                    {willHavePunches && (
+                    {willHavePunches && isHalfDay && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
-                        This day has punches, so it will still show as Present or
-                        Late. Scans take precedence over leave.
+                        This day has punches. Status will stay Present or Late, with a
+                        &quot;half-day leave&quot; marker.
+                      </p>
+                    )}
+
+                    {willHavePunches && markLeave && !isHalfDay && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        This day has punches, so it will still show as Present or Late
+                        unless you check Half-day leave. 
                       </p>
                     )}
 

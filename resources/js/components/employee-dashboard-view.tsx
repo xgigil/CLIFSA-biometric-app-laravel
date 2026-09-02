@@ -215,7 +215,7 @@ export function EmployeeDashboardView({
       {/* 3. Lower Section (2 columns on large screens) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-8">
         {/* Column 1: Today's Shift Status */}
-        <Card className="shadow-xs">
+        <Card className="shadow-xs"> 
           <CardHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <div>
@@ -225,10 +225,19 @@ export function EmployeeDashboardView({
                 <CardDescription className="text-xs">
                   {stats.todayStatus.state === "on_leave" 
                     ? "Scheduled leave - no scan expected"
-                    : "Real-time status based on biometric scans"}
+                    : stats.todayStatus.isHalfDayLeave 
+                     ? "Half-day leave - punches recorded for partial attendance"
+                     : "Real-time status based on biometric scans"}
                 </CardDescription>
               </div>
-              {renderTodayStatusBadge()}
+              <div className="flex items-center gap-2">
+                {renderTodayStatusBadge()}
+                {stats.todayStatus.isHalfDayLeave && (
+                  <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                    Half-day Leave
+                  </span>
+                )}
+              </div>
             </div>
           </CardHeader>
 
@@ -249,31 +258,38 @@ export function EmployeeDashboardView({
                 </div>
               </div>
             ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-md border bg-card">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 shrink-0">
-                  <LogIn className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">Time In</p>
-                  <p className="text-sm font-semibold text-foreground font-mono">
-                    {formatTime12h(stats.todayStatus.firstPunch)}
+              <div className="space-y-3">
+                {stats.todayStatus.isHalfDayLeave && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    You are on approved half-day leave today. Your scan times are shown below.
                   </p>
-                </div>
-              </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 rounded-md border bg-card">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 shrink-0">
+                      <LogIn className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Time In</p>
+                      <p className="text-sm font-semibold text-foreground font-mono">
+                        {formatTime12h(stats.todayStatus.firstPunch)}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-md border bg-card">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 shrink-0">
-                  <LogOut className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">Time Out</p>
-                  <p className="text-sm font-semibold text-foreground font-mono">
-                    {formatTime12h(stats.todayStatus.lastPunch)}
-                  </p>
+                  <div className="flex items-center gap-3 p-3 rounded-md border bg-card">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 shrink-0">
+                      <LogOut className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Time Out</p>
+                      <p className="text-sm font-semibold text-foreground font-mono">
+                        {formatTime12h(stats.todayStatus.lastPunch)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
             )}
           </CardContent>
         </Card>
