@@ -445,8 +445,8 @@ export function EditDayDialog({
 
                     {willHavePunches && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
-                        This day has punches, so it will still show as Present or
-                        Late. Scans take precedence over leave.
+                        This day has punches. Status will show as On Leave and will not count toward
+                        present days or logged hours; scan times stay on the record.
                       </p>
                     )}
 
