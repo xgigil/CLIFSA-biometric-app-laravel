@@ -158,8 +158,11 @@ export function processDailyLogs(
         : null;
 
     const punchTime = firstPunch ? firstPunch.substring(11, 16) : null;
-    const status: AttendanceStatus =
-      punchTime && punchTime > lateCutoff ? "late" : "present";
+    const status: AttendanceStatus = onLeave
+      ? "on_leave"
+      : punchTime && punchTime > lateCutoff
+        ? "late"
+        : "present";
 
     let totalHoursWorked = 0;
     if (firstPunch && lastPunch) {
@@ -290,7 +293,9 @@ export function processUserHistoryLogs(
       dayLogs,
       [employee],
       workStartTime,
-      gracePeriod
+      gracePeriod,
+      dateStr,
+      leaveIndex
     );
 
     return {
@@ -475,7 +480,7 @@ export function calculateEmployeePersonalStats(
     if (!isWeekend) {
       const dayLogs = logsByDate[dateStr] || [];
 
-      if (dayLogs.length === 0 && isOnLeave(leaveIndex, empId, dateStr)) return;
+      if (isOnLeave(leaveIndex, empId, dateStr)) return; // Leave days are skipped even if there are punches logged
 
       elapsedWorkdaysCount++;
       if (dayLogs.length > 0) {
@@ -514,6 +519,7 @@ export function calculateEmployeePersonalStats(
   let loggedHoursThisWeek = 0;
   Object.keys(logsByDate).forEach((dStr) => {
     if (dStr >= mondayStr && dStr <= sundayStr) {
+      if (isOnLeave(leaveIndex, empId, dStr)) return; // Leave days are skipped even if there are punches logged
       const res = processSingleDayEmpLogs(
         logsByDate[dStr],
         workStartTime,
@@ -525,13 +531,15 @@ export function calculateEmployeePersonalStats(
   loggedHoursThisWeek = parseFloat(loggedHoursThisWeek.toFixed(2));
 
   const todayLogs = logsByDate[todayStr] || [];
+  const onLeaveToday = isOnLeave(leaveIndex, empId, todayStr);
+
   let todayStatus: EmployeeMonthlyStats["todayStatus"] = {
-    state: isOnLeave(leaveIndex, empId, todayStr) ? "on_leave" : "not_scanned",
+    state: onLeaveToday ? "on_leave" : "not_scanned",
     firstPunch: null,
     lastPunch: null,
   };
 
-  if (todayLogs.length > 0) {
+  if (!onLeaveToday && todayLogs.length > 0) {
     const res = processSingleDayEmpLogs(todayLogs, workStartTime, gracePeriod);
     if (res.cleanedLogs.length === 1) {
       todayStatus = {
@@ -619,14 +627,14 @@ export function generateMonthlyCalendarMatrix(
        
     if (isWeekend) {
       status = "weekend";
+    } else if (onLeave) {
+      status = "on_leave"; //evaluated leave before checking punches
     } else if (dayLogs.length > 0) {
       status = res.status === "late" ? "late" : "on_time";
-    } else if (onLeave) {
-      status = "on_leave";
     } else if (dateStr > todayStr) {
       status = "future";
     } else {
-      status = "absent";
+      status = "absent"
     }
 
     matrix.push({
