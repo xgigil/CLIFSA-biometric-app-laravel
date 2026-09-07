@@ -5,6 +5,7 @@ import {
   processDailyLogs,
   processUserHistoryLogs,
   buildLeaveIndex,
+  buildHolidayIndex,
 } from "@/utils/attendance-processor";
 import { PersonnelAnalytics } from "./columns";
 import { AdminAnalyticsSkeleton } from "@/components/skeletons/admin-analytics-skeleton";
@@ -66,6 +67,12 @@ async function AnalyticsDataContainer({
   if (!isAdmin) {
     leavesQuery = leavesQuery.eq("employee_id", userEmpId);
   }
+
+  const holidaysQuery = supabase
+    .from("company_holidays")
+    .select("start_date, end_date")
+    .lte("start_date", leaveEnd)
+    .gte("end_date", leaveStart);
   // --end of replaced code
 
   const [
@@ -73,6 +80,7 @@ async function AnalyticsDataContainer({
     { data: allEmployees, error: employeesError },
     { data: sysSettings, error: sysSettingsError },
     { data: leavesData, error: leavesError },
+    { data: holidaysData, error: holidaysError },
   ] = await Promise.all([
     logsQuery,
     empQuery,
@@ -82,6 +90,7 @@ async function AnalyticsDataContainer({
       .eq("id", 1)
       .maybeSingle(),
     leavesQuery,
+    holidaysQuery,
   ]);
 
   if (error) {
@@ -103,6 +112,10 @@ async function AnalyticsDataContainer({
     console.error("Leaves fetch error:", leavesError);
   }
 
+  if (holidaysError) {
+    console.error("Holidays fetch error:", holidaysError);
+  }
+
   let workStartTime = "09:00";
   let gracePeriod = 15;
   if (sysSettings) {
@@ -111,6 +124,7 @@ async function AnalyticsDataContainer({
   }
 
   const leaveIndex = buildLeaveIndex(leavesData || []);
+  const holidayIndex = buildHolidayIndex(holidaysData || []);
 
   const currentEmp = (allEmployees || [])[0] || {
     employee_id: profile?.employee_id || 0,
@@ -133,7 +147,8 @@ async function AnalyticsDataContainer({
       workStartTime,
       gracePeriod,
       selectedDate,
-      leaveIndex
+      leaveIndex,
+      holidayIndex
     );
   } else {
     processedData = processDailyLogs(
@@ -142,7 +157,8 @@ async function AnalyticsDataContainer({
       workStartTime,
       gracePeriod,
       selectedDate,
-      leaveIndex
+      leaveIndex,
+      holidayIndex
     ).map((item) => ({ ...item, date: selectedDate }));
   }
 

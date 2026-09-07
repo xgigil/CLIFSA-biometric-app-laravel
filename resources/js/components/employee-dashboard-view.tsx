@@ -107,7 +107,13 @@ export function EmployeeDashboardView({
           <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border-blue-300 dark:border-blue-800">
             On Leave
           </Badge>
-        )
+        );
+      case "holiday":
+        return (
+          <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-900/50 dark:text-slate-300 border-slate-300 dark:border-slate-700">
+            Holiday
+          </Badge>
+        );
       case "not_scanned":
       default:
         return (
@@ -124,6 +130,10 @@ export function EmployeeDashboardView({
         return `Checked In at ${formatTime12h(stats.todayStatus.firstPunch)}`;
       case "checked_out":
         return `Checked Out at ${formatTime12h(stats.todayStatus.lastPunch)}`;
+      case "on_leave":
+        return "On approved leave today";
+      case "holiday":
+        return "Company holiday today";
       case "not_scanned":
       default:
         return "No Scan Recorded Today";
@@ -223,9 +233,11 @@ export function EmployeeDashboardView({
                   Today's Shift Status
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {stats.todayStatus.state === "on_leave" 
+                  {stats.todayStatus.state === "on_leave"
                     ? "Scheduled leave - no scan expected"
-                    : "Real-time status based on biometric scans"}
+                    : stats.todayStatus.state === "holiday"
+                      ? "Company holiday - attendance not required"
+                      : "Real-time status based on biometric scans"}
                 </CardDescription>
               </div>
               {renderTodayStatusBadge()}
@@ -245,6 +257,20 @@ export function EmployeeDashboardView({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     No scan is expected, and this day won&apos;t count against your attendance.
+                  </p>
+                </div>
+              </div>
+            ) : stats.todayStatus.state === "holiday" ? (
+              <div className="flex items-center gap-3 p-3 rounded-md border border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200/80 text-slate-700 dark:bg-slate-900 dark:text-slate-300 shrink-0">
+                  <CalendarCheck2 className="size-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Today is a company holiday
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Attendance is not required. Any scans are still recorded, and this day won&apos;t count against your attendance.
                   </p>
                 </div>
               </div>

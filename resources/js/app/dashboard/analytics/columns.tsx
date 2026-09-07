@@ -9,6 +9,7 @@ import {
   IconCircleXFilled,
   IconCalendar,
   IconAlarmFilled,
+  IconFlag,
   IconPencil,
   IconTrash,
 } from "@tabler/icons-react";
@@ -45,7 +46,7 @@ function formatDateFormatted(dateStr?: string): string {
   });
 }
 
-export type AttendanceStatus = "present" | "late" | "absent" | "on_leave";
+export type AttendanceStatus = "present" | "late" | "absent" | "on_leave" | "holiday";
 
 export type PersonnelAnalytics = {
   employee_id: string;
@@ -269,6 +270,15 @@ export const columns: ColumnDef<PersonnelAnalytics>[] = [
         on_leave: {
           icon: <IconCalendar size={14} className="text-blue-500 shrink-0" />,
           label: "On Leave",
+        },
+        holiday: {
+          icon: (
+            <IconFlag
+              size={14}
+              className="text-slate-600 dark:text-slate-400 shrink-0"
+            />
+          ),
+          label: "Holiday",
         },
       };
 
