@@ -1,18 +1,10 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-
-async function checkIsAdmin(db: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user } } = await db.auth.getUser();
-  if (!user) return false;
-  const { data: profile } = await db
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  return profile?.role === "admin";
-}
+import {
+  checkIsAdmin,
+  revalidateAttendancePaths,
+} from "@/app/dashboard/attendance/admin";
 
 export async function getEmployeesAction() {
   try {
@@ -59,8 +51,7 @@ export async function createAttendanceLogAction(payload: {
 
     if (error) return { success: false, error: error.message };
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/analytics");
+    revalidateAttendancePaths();
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to create attendance log" };
@@ -94,8 +85,7 @@ export async function updateAttendanceLogAction(
 
     if (error) return { success: false, error: error.message };
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/analytics");
+    revalidateAttendancePaths();
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to update attendance log" };
@@ -118,8 +108,7 @@ export async function deleteAttendanceLogAction(id: number) {
 
     if (error) return { success: false, error: error.message };
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/analytics");
+    revalidateAttendancePaths();
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to delete attendance log" };

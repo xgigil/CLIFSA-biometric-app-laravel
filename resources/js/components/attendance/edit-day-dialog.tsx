@@ -32,6 +32,7 @@ import {
   setLeaveAction,
   removeLeaveAction,
 } from "@/app/dashboard/leaves/actions";
+import { getHolidaysForRangeAction } from "@/app/dashboard/holidays/actions";
 import type { RawBiometricLog } from "@/utils/attendance-processor";
 
 export interface EditDayDialogProps {
@@ -116,6 +117,8 @@ export function EditDayDialog({
   const [leaveNote, setLeaveNote] = React.useState("");
   const [fetchingLeave, setFetchingLeave] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [isCompanyHoliday, setIsCompanyHoliday] = React.useState(false);
+  const [holidayNote, setHolidayNote] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
@@ -138,19 +141,30 @@ export function EditDayDialog({
     setMarkLeave(false);
     setLeaveType("vacation");
     setLeaveNote("");
+    setIsCompanyHoliday(false);
+    setHolidayNote(null);
 
     if (!employeeId || !date) return;
 
     setFetchingLeave(true);
-    getLeavesForRangedAction(date, date, employeeId)
-      .then((res) => {
-        if (res.success && res.data) {
-          const rows = res.data as LeaveRecord[];
+    Promise.all([
+      getLeavesForRangedAction(date, date, employeeId),
+      getHolidaysForRangeAction(date, date),
+    ])
+      .then(([leaveRes, holidayRes]) => {
+        if (leaveRes.success && leaveRes.data) {
+          const rows = leaveRes.data as LeaveRecord[];
           setLeave(
             rows.find((r) => Number(r.employee_id) === employeeId) || null
           );
-        } else {
-          toast.error(res.error || "Failed to load the leave record");
+        } else if (!leaveRes.success) {
+          toast.error(leaveRes.error || "Failed to load the leave record");
+        }
+
+        if (holidayRes.success && holidayRes.data && holidayRes.data.length > 0) {
+          setIsCompanyHoliday(true);
+          setHolidayNote(holidayRes.data[0]?.note || null);
+          setMarkLeave(false);
         }
       })
       .finally(() => setFetchingLeave(false));
@@ -392,7 +406,18 @@ export function EditDayDialog({
               </div>
             )}
 
-            {!fetchingLeave && !leave && (
+            {!fetchingLeave && isCompanyHoliday && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/40 p-3 text-sm space-y-1">
+                <div className="font-medium text-foreground">Company Holiday</div>
+                <div className="text-xs text-muted-foreground">
+                  This day is a company holiday for all employees. Personal leave
+                  cannot be set here.
+                  {holidayNote ? ` Note: ${holidayNote}` : ""}
+                </div>
+              </div>
+            )}
+
+            {!fetchingLeave && !leave && !isCompanyHoliday && (
               <div className="space-y-3">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input

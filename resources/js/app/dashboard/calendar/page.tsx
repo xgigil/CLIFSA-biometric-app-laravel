@@ -66,7 +66,7 @@ async function CalendarContainer({
   const lastDayNum = new Date(year, month, 0).getDate();
   const endDate = `${yearStr}-${monthStr}-${String(lastDayNum).padStart(2, "0")}`;
 
-  const [logsRes, sysSettingsRes, leavesRes] = await Promise.all([ // added leavesRes to get leaves data
+  const [logsRes, sysSettingsRes, leavesRes, holidaysRes] = await Promise.all([
     supabase
       .from("hik_biometric_logs")
       .select("*")
@@ -86,6 +86,11 @@ async function CalendarContainer({
       .eq("employee_id", selectedEmployeeId)
       .lte("start_date", endDate)
       .gte("end_date", startDate),
+    supabase
+      .from("company_holidays")
+      .select("start_date, end_date")
+      .lte("start_date", endDate)
+      .gte("end_date", startDate),
   ]);
 
   if (logsRes.error) {
@@ -98,17 +103,23 @@ async function CalendarContainer({
 
   if (leavesRes.error) {
     console.error("Leaves fetch error:", leavesRes.error);
-  } // added leaves fetch error handling
+  }
+
+  if (holidaysRes.error) {
+    console.error("Holidays fetch error:", holidaysRes.error);
+  }
 
   const logs = logsRes.data || [];
   const leaves = leavesRes.data || [];
+  const holidays = holidaysRes.data || [];
   const workStartTime = sysSettingsRes.data?.work_start_time || "09:00";
   const gracePeriod = sysSettingsRes.data?.grace_period ?? 15;
 
   return (
     <CalendarView
       logs={logs}
-      leaves={leaves} // added leaves data to the calendar view
+      leaves={leaves}
+      holidays={holidays}
       userEmpId={userEmpId}
       isAdmin={isAdmin}
       employeesList={employeesList}

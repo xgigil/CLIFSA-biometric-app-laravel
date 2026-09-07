@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FingerprintPattern } from "lucide-react";
+import { ChevronRightIcon, FingerprintPattern, Settings2 } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -9,13 +9,32 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Settings2 } from "lucide-react";
-import { IconDashboard, IconCalendar, IconListDetails, IconPlus } from "@tabler/icons-react"
+import {
+  IconDashboard,
+  IconCalendar,
+  IconListDetails,
+  IconPlus,
+  IconFlag,
+  IconCalendarEvent,
+} from "@tabler/icons-react";
 import { AddAttendanceDialog } from "@/components/attendance/add-attendance-dialog";
 import { SetLeaveDialog } from "@/components/attendance/set-leave-dialog";
+import { SetHolidayDialog } from "@/components/attendance/set-holiday-dialog";
 
 const data = {
   navMain: [
@@ -69,8 +88,15 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const { state, isMobile } = useSidebar();
+  const isIconCollapsed = state === "collapsed" && !isMobile;
   const [isAddAttendanceOpen, setIsAddAttendanceOpen] = React.useState(false);
   const [isSetLeaveOpen, setIsSetLeaveOpen] = React.useState(false);
+  const [isSetHolidayOpen, setIsSetHolidayOpen] = React.useState(false);
+
+  const actionButtonClassName =
+    "w-full h-10 gap-2 rounded-full border border-border bg-background font-semibold text-xs justify-start px-4 hover:!bg-sidebar-accent hover:!text-white dark:hover:!bg-sidebar-accent dark:hover:!text-white aria-expanded:hover:!bg-sidebar-accent aria-expanded:hover:!text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:h-9 items-center flex";
+
   return (
     <Sidebar variant="sidebar" {...props}>
       <SidebarHeader>
@@ -105,17 +131,80 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                 <span className="group-data-[collapsible=icon]:hidden">Add Attendance</span>
               </Button>
             </div>
-            {/* added set leave button */}
+
             <div className="px-2.5 pb-2 group-data-[collapsible=icon]:px-1.5">
-              <Button
-                variant="outline"
-                className="w-full h-10 gap-2 rounded-full font-semibold text-xs justify-start px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:h-9 items-center flex"
-                title="Set Leave"
-                onClick={() => setIsSetLeaveOpen(true)}
-              >
-                <IconCalendar className="size-4 shrink-0" />
-                <span className="group-data-[collapsible=icon]:hidden">Set Leave</span>
-              </Button>
+              {isIconCollapsed ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={actionButtonClassName}
+                      title="Leave & Holiday"
+                    >
+                      <IconCalendarEvent className="size-4 shrink-0" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    side="right"
+                    align="start"
+                    sideOffset={8}
+                    className="min-w-44 rounded-lg"
+                  >
+                    <DropdownMenuItem
+                      className="gap-2 text-xs font-medium cursor-pointer hover:bg-sidebar-accent hover:text-white focus:bg-sidebar-accent focus:text-white"
+                      onClick={() => setIsSetLeaveOpen(true)}
+                    >
+                      <IconCalendar className="size-4 shrink-0" />
+                      Set Leave
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2 text-xs font-medium cursor-pointer hover:bg-sidebar-accent hover:text-white focus:bg-sidebar-accent focus:text-white"
+                      onClick={() => setIsSetHolidayOpen(true)}
+                    >
+                      <IconFlag className="size-4 shrink-0" />
+                      Set Holiday
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Collapsible defaultOpen={false} className="group/leave-holiday">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={actionButtonClassName}
+                      title="Leave & Holiday"
+                    >
+                      <IconCalendarEvent className="size-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        Leave & Holiday
+                      </span>
+                      <ChevronRightIcon className="ml-auto size-4 shrink-0 transition-transform group-data-[collapsible=icon]:hidden group-data-[state=open]/leave-holiday:rotate-90" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-2 ml-3.5 flex flex-col gap-2 border-l border-sidebar-border pl-2.5">
+                      <Button
+                        variant="ghost"
+                        className={actionButtonClassName}
+                        title="Set Leave"
+                        onClick={() => setIsSetLeaveOpen(true)}
+                      >
+                        <IconCalendar className="size-4 shrink-0" />
+                        <span>Set Leave</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={actionButtonClassName}
+                        title="Set Holiday"
+                        onClick={() => setIsSetHolidayOpen(true)}
+                      >
+                        <IconFlag className="size-4 shrink-0" />
+                        <span>Set Holiday</span>
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
           </>
         )}
@@ -129,6 +218,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         onOpenChange={setIsAddAttendanceOpen}
       />
       <SetLeaveDialog open={isSetLeaveOpen} onOpenChange={setIsSetLeaveOpen} />
+      <SetHolidayDialog open={isSetHolidayOpen} onOpenChange={setIsSetHolidayOpen} />
     </Sidebar>
   );
 }

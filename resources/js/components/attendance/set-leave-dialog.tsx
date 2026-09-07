@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { getEmployeesAction } from "@/app/dashboard/analytics/actions";
-import { setLeaveAction } from "@/app/dashboard/leaves/actions";
+import { setLeaveAction, setLeaveForAllAction } from "@/app/dashboard/leaves/actions";
 
 interface SetLeaveDialogProps {
   open: boolean;
@@ -35,7 +35,7 @@ interface EmployeeOption {
   employee_name: string;
 }
 
-const LEAVE_TYPES = [
+const LEAVE_TYPES = [ // Add here the types of on-leave here
   { value: "vacation", label: "Vacation" },
   { value: "sick", label: "Sick Leave" },
   { value: "unpaid", label: "Unpaid Leave" },
@@ -102,20 +102,40 @@ export function SetLeaveDialog({
 
     setLoading(true);
     try {
-      const res = await setLeaveAction({
-        employee_id: parseInt(selectedEmpId, 10),
-        start_date: startDate,
-        end_date: endDate,
-        leave_type: leaveType,
-        note: note.trim() || undefined,
-      });
+      if (selectedEmpId === "all") {
+        const res = await setLeaveForAllAction({
+          start_date: startDate,
+          end_date: endDate,
+          leave_type: leaveType,
+          note: note.trim() || undefined,
+        });
 
-      if (res.success) {
-        toast.success("Leave saved successfully");
-        onOpenChange(false);
+        if (res.success) {
+          toast.success(
+            `Leave saved for ${res.created ?? 0} employees(s)` +
+            (res.skipped ? ` (${res.skipped} already on leave, skipped)` : "")
+          );
+
+          onOpenChange(false);
+        } else {
+          toast.error(res.error || "Failed to save leave");
+        }
       } else {
-        toast.error(res.error || "Failed to save leave");
-      }
+        const res = await setLeaveAction({
+          employee_id: parseInt(selectedEmpId, 10),
+          start_date: startDate,
+          end_date: endDate,
+          leave_type: leaveType,
+          note: note.trim() || undefined,
+        });
+  
+        if (res.success) {
+          toast.success("Leave saved successfully");
+          onOpenChange(false);
+        } else {
+          toast.error(res.error || "Failed to save leave");
+        }
+      } 
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "An unexpected error occurred"
@@ -144,6 +164,7 @@ export function SetLeaveDialog({
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
                   {employees.map((emp) => (
                     <SelectItem
                       key={emp.employee_id}
@@ -156,6 +177,12 @@ export function SetLeaveDialog({
               </Select>
             )}
           </div>
+
+          {selectedEmpId === "all" && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              Applies to every active employee. People already on leave for this range are skipped.
+            </p>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -201,7 +228,11 @@ export function SetLeaveDialog({
               id="leave-note"
               value={note}
               maxLength={255}
-              placeholder="e.g. Approved by HR"
+              placeholder={
+                selectedEmpId === "all"
+                  ? "e.g. Team offsite / shared leave"
+                  : "e.g. Approved by HR"
+                }
               onChange={(e) => setNote(e.target.value)}
             />
           </div>

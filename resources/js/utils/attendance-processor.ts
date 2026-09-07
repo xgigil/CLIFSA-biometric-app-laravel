@@ -59,6 +59,45 @@ export function isOnLeave( index: LeaveIndex, empId: number | string, dateStr: s
 }
 // For employee on-leave --end--
 
+// For company holiday --start--
+export type HolidayRow = {
+  start_date: string;
+  end_date: string;
+};
+
+export type HolidayIndex = Set<string>;
+
+const MAX_HOLIDAY_SPAN_DAYS = 366;
+
+export function buildHolidayIndex(holidays: HolidayRow[]): HolidayIndex {
+  const index: HolidayIndex = new Set();
+
+  holidays.forEach((holiday) => {
+    const start = holiday.start_date?.substring(0, 10);
+    const end = (holiday.end_date || holiday.start_date)?.substring(0, 10);
+    if (!start || !end || end < start) return;
+
+    const cursor = new Date(`${start}T12:00:00Z`);
+    const last = new Date(`${end}T12:00:00Z`);
+
+    let guard = 0;
+    while (cursor <= last && guard < MAX_HOLIDAY_SPAN_DAYS) {
+      const y = cursor.getUTCFullYear();
+      const m = String(cursor.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(cursor.getUTCDate()).padStart(2, "0");
+      index.add(`${y}-${m}-${d}`);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      guard++;
+    }
+  });
+  return index;
+}
+
+export function isHoliday( index: HolidayIndex, dateStr: string ): boolean {
+  return index.has(dateStr);
+}
+// For company holidays --end--
+
 export function processDailyLogs(
   logs: RawBiometricLog[],
   allEmployees: EmployeeStub[],
@@ -66,6 +105,7 @@ export function processDailyLogs(
   gracePeriod: number = 0,
   dateStr?: string,
   leaveIndex: LeaveIndex = new Set(),
+  holidayIndex: HolidayIndex = new Set(),
 ): PersonnelAnalytics[] {
   const groups: Record<number, RawBiometricLog[]> = {};
 
@@ -136,6 +176,7 @@ export function processDailyLogs(
       cleanedLogs.push(log);
     });
 
+    const onHoliday = !!dateStr && isHoliday(holidayIndex, dateStr);
     const onLeave = !!dateStr && isOnLeave(leaveIndex, empId, dateStr);
 
     if (cleanedLogs.length === 0) {
@@ -145,7 +186,7 @@ export function processDailyLogs(
         first_punch: null,
         last_punch: null,
         total_hours_worked: 0,
-        status: (onLeave ? "on_leave" : "absent") as AttendanceStatus, // added on_leave status
+        status: ( onHoliday ? "holiday" : onLeave ? "on_leave" : "absent" ) as AttendanceStatus, // added on_leave status and holiday status
         log_id: undefined,
         raw_logs: [],
       };
@@ -158,11 +199,13 @@ export function processDailyLogs(
         : null;
 
     const punchTime = firstPunch ? firstPunch.substring(11, 16) : null;
-    const status: AttendanceStatus = onLeave
+    const status: AttendanceStatus = onHoliday
+      ? "holiday"
+      :onLeave
       ? "on_leave"
-      : punchTime && punchTime > lateCutoff
-        ? "late"
-        : "present";
+        : punchTime && punchTime > lateCutoff
+          ? "late"
+          : "present";
 
     let totalHoursWorked = 0;
     if (firstPunch && lastPunch) {
@@ -198,6 +241,7 @@ export function processUserHistoryLogs(
   gracePeriod: number = 0,
   selectedDate?: string,
   leaveIndex: LeaveIndex = new Set(),
+  holidayIndex: HolidayIndex = new Set(),
 ): PersonnelAnalytics[] {
   const dateGroups: Record<string, RawBiometricLog[]> = {};
 
@@ -275,14 +319,15 @@ export function processUserHistoryLogs(
     const dayLogs = dateGroups[dateStr];
 
     if (!dayLogs || dayLogs.length === 0) {
-      const onLeave = isOnLeave(leaveIndex, employee.employee_id, dateStr);
+      const onHoliday = isHoliday(holidayIndex, dateStr);
+      const onLeave = !onHoliday && isOnLeave(leaveIndex, employee.employee_id, dateStr);
       return {
         employee_id: String(employee.employee_id),
         employee_name: employee.employee_name || "Unregistered Token",
         first_punch: null,
         last_punch: null,
         total_hours_worked: 0,
-        status: (onLeave ? "on_leave" : "absent") as AttendanceStatus, // added on_leave status
+        status: (onHoliday ? "holiday" :onLeave ? "on_leave" : "absent") as AttendanceStatus, // added on_leave status
         date: dateStr,
         log_id: undefined,
         raw_logs: [],
@@ -295,7 +340,8 @@ export function processUserHistoryLogs(
       workStartTime,
       gracePeriod,
       dateStr,
-      leaveIndex
+      leaveIndex,
+      holidayIndex
     );
 
     return {
@@ -313,7 +359,7 @@ export interface EmployeeMonthlyStats {
   presentDaysCount: number;
   elapsedWorkdaysCount: number;
   todayStatus: {
-    state: "checked_in" | "checked_out" | "not_scanned" | "on_leave";
+    state: "checked_in" | "checked_out" | "not_scanned" | "on_leave" | "holiday";
     firstPunch: string | null;
     lastPunch: string | null;
   };
@@ -324,7 +370,7 @@ export interface CalendarDayStatus {
   dayNumber: number;
   isCurrentMonth: boolean;
   isWeekend: boolean;
-  status: "on_time" | "late" | "absent" | "weekend" | "future" | "on_leave"; // added on_leave status
+  status: "on_time" | "late" | "absent" | "weekend" | "future" | "on_leave" | "holiday"; // added on_leave status and holiday status
   firstPunch: string | null;
   lastPunch: string | null;
   totalHours: number;
@@ -451,7 +497,8 @@ export function calculateEmployeePersonalStats(
   gracePeriod: number = 0,
   monthDates: string[],
   todayStr: string,
-  leaveIndex: LeaveIndex = new Set()
+  leaveIndex: LeaveIndex = new Set(),
+  holidayIndex: HolidayIndex = new Set(),
 ): EmployeeMonthlyStats {
   const empLogs = logs.filter((l) => l.employee_id === empId);
 
@@ -480,6 +527,7 @@ export function calculateEmployeePersonalStats(
     if (!isWeekend) {
       const dayLogs = logsByDate[dateStr] || [];
 
+      if (isHoliday(holidayIndex, dateStr)) return; // Holiday days are skipped even if there are punches logged
       if (isOnLeave(leaveIndex, empId, dateStr)) return; // Leave days are skipped even if there are punches logged
 
       elapsedWorkdaysCount++;
@@ -519,7 +567,8 @@ export function calculateEmployeePersonalStats(
   let loggedHoursThisWeek = 0;
   Object.keys(logsByDate).forEach((dStr) => {
     if (dStr >= mondayStr && dStr <= sundayStr) {
-      if (isOnLeave(leaveIndex, empId, dStr)) return; // Leave days are skipped even if there are punches logged
+      if (isHoliday(holidayIndex, dStr)) return; // Holiday days are skipped in weekly hours even if there are punches logged
+      if (isOnLeave(leaveIndex, empId, dStr)) return; // Leave days are skipped in weekly hours even if there are punches logged
       const res = processSingleDayEmpLogs(
         logsByDate[dStr],
         workStartTime,
@@ -531,10 +580,11 @@ export function calculateEmployeePersonalStats(
   loggedHoursThisWeek = parseFloat(loggedHoursThisWeek.toFixed(2));
 
   const todayLogs = logsByDate[todayStr] || [];
-  const onLeaveToday = isOnLeave(leaveIndex, empId, todayStr);
+  const onHolidayToday = isHoliday(holidayIndex, todayStr);
+  const onLeaveToday = !onHolidayToday && isOnLeave(leaveIndex, empId, todayStr);
 
   let todayStatus: EmployeeMonthlyStats["todayStatus"] = {
-    state: onLeaveToday ? "on_leave" : "not_scanned",
+    state: onHolidayToday ? "holiday" : onLeaveToday ? "on_leave" : "not_scanned",
     firstPunch: null,
     lastPunch: null,
   };
@@ -576,6 +626,7 @@ export function generateMonthlyCalendarMatrix(
   gracePeriod: number = 0,
   todayStr: string,
   leaveIndex: LeaveIndex = new Set(),
+  holidayIndex: HolidayIndex = new Set(),
 ): CalendarDayStatus[] {
   const empLogs = logs.filter((l) => l.employee_id === empId);
 
@@ -623,10 +674,13 @@ export function generateMonthlyCalendarMatrix(
     const res = processSingleDayEmpLogs(dayLogs, workStartTime, gracePeriod);
 
     let status: CalendarDayStatus["status"]; // added on_leave status
-    const onLeave = isOnLeave(leaveIndex, empId, dateStr);
+    const onHoliday = isHoliday(holidayIndex, dateStr);
+    const onLeave = !onHoliday && isOnLeave(leaveIndex, empId, dateStr);
        
     if (isWeekend) {
       status = "weekend";
+    } else if (onHoliday) {
+      status = "holiday";
     } else if (onLeave) {
       status = "on_leave"; //evaluated leave before checking punches
     } else if (dayLogs.length > 0) {

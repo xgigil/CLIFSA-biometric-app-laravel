@@ -6,7 +6,9 @@ import {
   RawBiometricLog,
   EmployeeStub,
   buildLeaveIndex,
+  buildHolidayIndex,
   LeaveRow,
+  HolidayRow,
 } from "@/utils/attendance-processor";
 import { RedirectToDefaultHome } from "@/components/redirect-to-default-home";
 import { AdminDashboardView } from "@/components/admin-dashboard-view";
@@ -85,8 +87,16 @@ async function AdminDashboardContainer({ today }: AdminContainerProps) {
       .lte("start_date", weekDates[4])
       .gte("end_date", weekDates[0]);
 
+  const holidaysQuery = supabase
+    .from("company_holidays")
+    .select("start_date, end_date")
+    .lte("start_date", weekDates[4])
+    .gte("end_date", weekDates[0]);
+
+  let holidayRows: HolidayRow[] = [];
+
   try {
-    const [empRes, logsRes, sysSettingsRes, leavesRes] = await Promise.all([
+    const [empRes, logsRes, sysSettingsRes, leavesRes, holidaysRes] = await Promise.all([
       empQuery,
       logsQuery,
       supabase
@@ -95,6 +105,7 @@ async function AdminDashboardContainer({ today }: AdminContainerProps) {
         .eq("id", 1)
         .maybeSingle(),
       leavesQuery,
+      holidaysQuery,
     ]);
 
     if (empRes.error) {
@@ -124,6 +135,12 @@ async function AdminDashboardContainer({ today }: AdminContainerProps) {
       leaveRows = leavesRes.data || [];
     }
 
+    if (holidaysRes.error) {
+      console.error("Holidays fetch error:", holidaysRes.error);
+    } else {
+      holidayRows = holidaysRes.data || [];
+    }
+
   } catch (err) {
     console.error("Unexpected fetch exception:", err);
     errorMsg = "An unexpected error occurred while fetching data.";
@@ -134,15 +151,16 @@ async function AdminDashboardContainer({ today }: AdminContainerProps) {
   }
 
   const leaveIndex = buildLeaveIndex(leaveRows);
+  const holidayIndex = buildHolidayIndex(holidayRows);
 
   const rawLogs = weeklyLogs.filter((log) => log.log_date === today);
   const recentLogs = [...rawLogs].reverse().slice(0, 5);
-  const processedData = processDailyLogs(rawLogs, allEmployees, workStartTime, gracePeriod, today, leaveIndex);
+  const processedData = processDailyLogs(rawLogs, allEmployees, workStartTime, gracePeriod, today, leaveIndex, holidayIndex);
 
   const chartData = weekDays.map((dayName, index) => {
     const dateStr = weekDates[index];
     const dailyLogs = weeklyLogs.filter((log) => log.log_date === dateStr);
-    const processed = processDailyLogs(dailyLogs, allEmployees, workStartTime, gracePeriod, dateStr, leaveIndex);
+    const processed = processDailyLogs(dailyLogs, allEmployees, workStartTime, gracePeriod, dateStr, leaveIndex, holidayIndex);
 
     const present = processed.filter((emp) => emp.status === "present").length;
     const late = processed.filter((emp) => emp.status === "late").length;
@@ -212,10 +230,11 @@ async function EmployeeDashboardContainer({
 
   let monthlyLogs: RawBiometricLog[] = [];
   let leaveRows: LeaveRow[] = [];
+  let holidayRows: HolidayRow[] = [];
   let empName = "Employee";
 
   try {
-    const [empRes, logsRes, sysSettingsRes, leavesRes] = await Promise.all([
+    const [empRes, logsRes, sysSettingsRes, leavesRes, holidaysRes] = await Promise.all([
       supabase
         .from("employees")
         .select("employee_id, employee_name")
@@ -239,7 +258,12 @@ async function EmployeeDashboardContainer({
         .eq("status", "approved")
         .eq("employee_id", userEmpId)
         .lte("start_date", monthDates[monthDates.length - 1])
-        .gte("end_date", logsStartDate)
+        .gte("end_date", logsStartDate),
+      supabase
+        .from("company_holidays")
+        .select("start_date, end_date")
+        .lte("start_date", monthDates[monthDates.length - 1])
+        .gte("end_date", logsStartDate),
     ]);
 
     if (empRes.error) {
@@ -267,6 +291,12 @@ async function EmployeeDashboardContainer({
     } else {
       leaveRows = leavesRes.data || [];
     }
+
+    if (holidaysRes.error) {
+      console.error("Holidays fetch error", holidaysRes.error);
+    } else {
+      holidayRows = holidaysRes.data || [];
+    }
   } catch (err) {
     console.error("Unexpected fetch exception:", err);
     errorMsg = "An unexpected error occurred while fetching data.";
@@ -277,6 +307,7 @@ async function EmployeeDashboardContainer({
   }
 
   const leaveIndex = buildLeaveIndex(leaveRows);
+  const holidayIndex = buildHolidayIndex(holidayRows);
 
   const stats = calculateEmployeePersonalStats(
     monthlyLogs,
@@ -285,7 +316,8 @@ async function EmployeeDashboardContainer({
     gracePeriod,
     monthDates,
     today,
-    leaveIndex
+    leaveIndex,
+    holidayIndex
   );
 
   const personalRecentLogs = [...monthlyLogs].reverse().slice(0, 5);

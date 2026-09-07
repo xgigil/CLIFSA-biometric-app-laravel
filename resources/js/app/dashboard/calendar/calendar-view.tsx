@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { EmployeeAttendanceCalendar } from "@/components/employee-attendance-calendar";
-import { RawBiometricLog, LeaveRow } from "@/utils/attendance-processor";
+import { RawBiometricLog, LeaveRow, HolidayRow } from "@/utils/attendance-processor";
 
 export interface EmployeeOption {
   employee_id: number;
@@ -19,11 +19,13 @@ export interface CalendarViewProps {
   workStartTime: string;
   gracePeriod: number;
   leaves?: LeaveRow[];
+  holidays?: HolidayRow[];
 }
 
 export function CalendarView({
   logs,
-  leaves = [], // added leaves data to the calendar view
+  leaves = [],
+  holidays = [],
   userEmpId,
   isAdmin,
   employeesList = [],
@@ -55,7 +57,8 @@ export function CalendarView({
       {/* Employee Attendance Calendar Component */}
       <EmployeeAttendanceCalendar
         logs={logs}
-        leaves={leaves} // added leaves data to the calendar view
+        leaves={leaves}
+        holidays={holidays}
         employeeId={selectedEmployeeId}
         workStartTime={workStartTime}
         gracePeriod={gracePeriod}

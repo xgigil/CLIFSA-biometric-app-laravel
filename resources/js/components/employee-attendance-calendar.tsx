@@ -28,8 +28,10 @@ import {
   generateMonthlyCalendarMatrix,
   CalendarDayStatus,
   RawBiometricLog,
-  buildLeaveIndex, // added buildLeaveIndex to build leave index for the calendar
-  LeaveRow, // added LeaveRow to handle leave data
+  buildLeaveIndex,
+  LeaveRow,
+  buildHolidayIndex,
+  HolidayRow,
 } from "@/utils/attendance-processor";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +40,8 @@ export interface EmployeeAttendanceCalendarProps {
   employeeId: number;
   workStartTime: string;
   gracePeriod: number;
-  leaves?: LeaveRow[]; // added leaves data to the calendar view
+  leaves?: LeaveRow[];
+  holidays?: HolidayRow[];
   /**
    * Initial year (e.g. 2026). Defaults to current year.
    */
@@ -54,7 +57,8 @@ export interface EmployeeAttendanceCalendarProps {
 }
 
 const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const EMPTY_LEAVES: LeaveRow[] = []; // added empty leaves array to handle no leaves data
+const EMPTY_LEAVES: LeaveRow[] = [];
+const EMPTY_HOLIDAYS: HolidayRow[] = [];
 
 export function formatTimeDisplay(punchStr: string | null, includeSeconds = false): string {
   if (!punchStr) return "--:--";
@@ -97,7 +101,8 @@ function formatDateTitle(dateStr: string): string {
 
 export function EmployeeAttendanceCalendar({
   logs,
-  leaves = EMPTY_LEAVES, // added leaves data to the calendar view
+  leaves = EMPTY_LEAVES,
+  holidays = EMPTY_HOLIDAYS,
   employeeId,
   workStartTime,
   gracePeriod,
@@ -192,8 +197,9 @@ export function EmployeeAttendanceCalendar({
     return d.toLocaleString("en-US", { month: "long", year: "numeric" });
   }, [year, month]);
 
-  const leaveIndex = useMemo(() => buildLeaveIndex(leaves), [leaves]) // added leaveIndex to handle leave data
-  
+  const leaveIndex = useMemo(() => buildLeaveIndex(leaves), [leaves]);
+  const holidayIndex = useMemo(() => buildHolidayIndex(holidays), [holidays]);
+
   const matrix = useMemo(() => {
     return generateMonthlyCalendarMatrix(
       logs,
@@ -203,9 +209,20 @@ export function EmployeeAttendanceCalendar({
       workStartTime,
       gracePeriod,
       todayStr,
-      leaveIndex // added leaveIndex to handle leave data
+      leaveIndex,
+      holidayIndex
     );
-  }, [logs, employeeId, year, month, workStartTime, gracePeriod, todayStr]);
+  }, [
+    logs,
+    employeeId,
+    year,
+    month,
+    workStartTime,
+    gracePeriod,
+    todayStr,
+    leaveIndex,
+    holidayIndex,
+  ]);
 
   return (
     <div className="w-full space-y-4">
@@ -223,6 +240,14 @@ export function EmployeeAttendanceCalendar({
         <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 gap-1 font-medium">
           <XCircle className="h-3 w-3 text-rose-600 dark:text-rose-400" />
           Absent / Missing Scan
+        </Badge>
+        <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 gap-1 font-medium">
+          <CalendarIcon className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+          On Leave
+        </Badge>
+        <Badge className="bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30 gap-1 font-medium">
+          <CalendarIcon className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+          Holiday
         </Badge>
         <Badge className="bg-muted text-muted-foreground border-border gap-1 font-medium">
           <Sun className="h-3 w-3 text-muted-foreground" />
@@ -298,7 +323,12 @@ export function EmployeeAttendanceCalendar({
                       {cell.status === "on_leave" && (
                         <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 text-[9px] md:text-[10px] px-1 py-0 h-4">
                           On Leave
-                        </Badge> 
+                        </Badge>
+                      )}
+                      {cell.status === "holiday" && (
+                        <Badge className="bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30 text-[9px] md:text-[10px] px-1 py-0 h-4">
+                          Holiday
+                        </Badge>
                       )}
                       {cell.status === "weekend" && (
                         <span className="text-[9px] text-muted-foreground/60 hidden sm:inline">
@@ -323,7 +353,7 @@ export function EmployeeAttendanceCalendar({
                         </div>
                       )}
                     </>
-                  ) : cell.isCurrentMonth && !cell.isWeekend && cell.status !== "future" && cell.status !== "on_leave" ? (
+                  ) : cell.isCurrentMonth && !cell.isWeekend && cell.status !== "future" && cell.status !== "on_leave" && cell.status !== "holiday" ? (
                     <span className="text-[10px] text-muted-foreground/60 italic">
                       No scan
                     </span>
@@ -376,6 +406,12 @@ export function EmployeeAttendanceCalendar({
                         <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-700 gap-1 font-semibold">
                           <CalendarIcon className="h-3.5 w-3.5" />
                           On Leave
+                        </Badge>
+                      )}
+                      {selectedDay.status === "holiday" && (
+                        <Badge className="bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-600 gap-1 font-semibold">
+                          <CalendarIcon className="h-3.5 w-3.5" />
+                          Holiday
                         </Badge>
                       )}
                       {selectedDay.status === "weekend" && (
