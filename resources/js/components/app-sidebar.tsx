@@ -95,7 +95,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const [isSetHolidayOpen, setIsSetHolidayOpen] = React.useState(false);
 
   const actionButtonClassName =
-    "w-full h-10 gap-2 rounded-full border border-border bg-background font-semibold text-xs justify-start px-4 hover:!bg-sidebar-accent hover:!text-white dark:hover:!bg-sidebar-accent dark:hover:!text-white aria-expanded:hover:!bg-sidebar-accent aria-expanded:hover:!text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:h-9 items-center flex";
+    "w-full h-10 gap-2 rounded-full border border-border bg-background font-semibold text-xs justify-start px-4 hover:!bg-gray-100 hover:!text-gray-700 dark:hover:!bg-gray-100 dark:hover:!text-gray-700 aria-expanded:!bg-gray-100 aria-expanded:!text-gray-700 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:h-9 items-center flex";
 
   return (
     <Sidebar variant="sidebar" {...props}>
