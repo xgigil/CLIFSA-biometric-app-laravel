@@ -12,7 +12,8 @@ import {
   CalendarCheck2,
   ClockAlert,
   UserRoundX,
-  Users,
+  CalendarOff,
+  // Users,
 } from "lucide-react";
 
 export function AdminDashboardSkeleton() {
@@ -86,7 +87,7 @@ export function AdminDashboardSkeleton() {
           </CardFooter>
         </Card>
 
-        {/* Total Employees Card */}
+        {/* On Leave Card */}
         <Card className="@container/card px-2">
           <CardHeader>
             <div className="flex flex-col items-baseline gap-2 pt-2">
@@ -94,12 +95,13 @@ export function AdminDashboardSkeleton() {
                 <Skeleton className="h-8 w-12" />
               </CardTitle>
               <CardDescription className="flex items-center text-gray-500 dark:text-gray-400 gap-2 pb-2">
-                Total Employees
+                {/* Total Employees */}
+                On Leave
               </CardDescription>
             </div>
             <CardAction className="pt-2">
               <div className="flex h-16 w-16 items-center justify-center rounded-md bg-indigo-100/80 text-indigo-600 border-3 border-indigo-600/20 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-400/30">
-                <Users className="size-11" />
+                <CalendarOff className="size-11" />
               </div>
             </CardAction>
           </CardHeader>

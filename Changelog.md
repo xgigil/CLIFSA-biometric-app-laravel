@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3] - Admin dashboard card update
+
+### Updated
+
+* **Replaced Total Employees with On Leave in admin dashboard cards.**
+
+  * Admin dashboard summary cards now show employees currently on leave instead of total employees.
+
 ## [1.0.2] - Company holidays and bulk leave entry
 
 ### Added

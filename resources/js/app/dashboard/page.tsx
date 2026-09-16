@@ -176,14 +176,15 @@ async function AdminDashboardContainer({ today }: AdminContainerProps) {
   const lateCount = processedData.filter((emp) => emp.status === "late").length;
   const absentCount = processedData.filter((emp) => emp.status === "absent").length;
   const onLeaveCount = processedData.filter((emp) => emp.status === "on_leave").length;
-  const totalCount = allEmployees.length;
+  // const totalCount = allEmployees.length;
 
   return (
     <AdminDashboardView
       presentCount={presentCount}
       lateCount={lateCount}
       absentCount={absentCount}
-      totalCount={totalCount}
+      onLeaveCount={onLeaveCount}
+      // totalCount={totalCount}
       chartData={chartData}
       weekRangeLabel={weekRangeLabel}
       today={today}

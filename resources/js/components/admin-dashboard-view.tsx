@@ -14,7 +14,8 @@ import {
   CalendarCheck2,
   UserRoundX,
   ClockAlert,
-  Users,
+  CalendarOff,
+  // Users,
   ArrowRight,
 } from "lucide-react";
 import { RawBiometricLog } from "@/utils/attendance-processor";
@@ -23,7 +24,8 @@ export interface AdminDashboardViewProps {
   presentCount: number;
   lateCount: number;
   absentCount: number;
-  totalCount: number;
+  onLeaveCount: number;
+  // totalCount: number;
   chartData: Array<{ day: string; present: number; late: number }>;
   weekRangeLabel: string;
   today: string;
@@ -44,7 +46,8 @@ export function AdminDashboardView({
   presentCount,
   lateCount,
   absentCount,
-  totalCount,
+  onLeaveCount,
+  // totalCount,
   chartData,
   weekRangeLabel,
   today,
@@ -145,15 +148,17 @@ export function AdminDashboardView({
           <CardHeader>
             <div className="flex flex-col items-baseline gap-2 pt-2 px-2">
               <CardTitle className="text-2xl font-bold text-gray-700 dark:text-gray-100 tabular-nums @[250px]/card:text-3xl animate-fade-in">
-                {totalCount}
+                {onLeaveCount}
+                {/* totalCount */}
               </CardTitle>
               <CardDescription className="flex items-center text-gray-500 dark:text-gray-400 gap-2 pb-2">
-                Total Employees
+                {/* Total Employees */}
+                On Leave
               </CardDescription>
             </div>
             <CardAction className="pt-2 px-2">
               <div className="flex h-16 w-16 items-center justify-center rounded-md bg-indigo-100/80 text-indigo-600 border-3 border-indigo-600/20 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-400/30">
-                <Users className="size-11" />
+                <CalendarOff className="size-11" />
               </div>
             </CardAction>
           </CardHeader>
