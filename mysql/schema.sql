@@ -66,3 +66,15 @@ CREATE TABLE IF NOT EXISTS employee_leaves (
   CONSTRAINT leaves_employee_fk FOREIGN KEY (employee_id) REFERENCES employees (employee_id) ON DELETE CASCADE,
   CONSTRAINT leaves_created_by_fk FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS company_holidays (
+  id INT NOT NULL AUTO_INCREMENT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  note VARCHAR(255) NULL,
+  created_by CHAR(36) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY holidays_date_range (start_date, end_date),
+  CONSTRAINT holidays_created_by_fk FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
